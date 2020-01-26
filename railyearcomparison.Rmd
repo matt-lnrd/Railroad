@@ -1,0 +1,306 @@
+---
+title: "2019RailData"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+First I'm going to load the data and library a couple of packages we will need.
+
+```{r cars}
+View(rail)
+library(tidyverse)
+library(ggthemes)
+
+rail <- read.csv("raildata2019.csv", header = TRUE, 
+                 check.names = FALSE, 
+                 stringsAsFactors=FALSE)
+```
+
+We are going to be preforming and analysis across three different variables to see how they changed in 2019 compared 2019. Those variables are dwell time, speed and cars on the line. We will also be comparing these across the different Class I railroads. First, let's look at some basic overall descriptive statitics.
+```{r}
+#Cars on the line
+
+rail2 <- rail %>% 
+  filter(Measure == "Cars On Line (Count)",
+         Variable == "Total") %>% 
+  gather(Date, Load, -("Railroad/\nRegion":"Sub-Variable")) %>% 
+  rename("railroad" = "Railroad/\nRegion")
+
+rail2$Load <- gsub(",","",rail2$Load)
+
+rail2$Load <- as.numeric(as.character(rail2$Load))
+
+rail2$Date2 <- as.POSIXct(strptime(rail2$Date, "%m/%d/%Y"))
+
+rail2 <- as.tibble(rail2)
+
+ggplot(rail2, aes(x=Date2, y=Load, color=railroad)) +
+  geom_line(size=2) +
+  theme_hc()
+```
+
+Just looking at this chart it does appear that there has been some declines on the cars on line variable, which would match up with what we have heard in earnings call and seen reported elsewhere. But We'll have to do some more analysis to see what the difference was. That will come later in this report.
+
+What's the average for each line?
+```{r}
+rail2 %>% 
+  group_by(railroad) %>% 
+  summarise(m = mean(Load))
+```
+
+```{r}
+#Dwell time
+dwell <- rail %>% 
+  filter(Measure == "Average Terminal Dwell Time (Excluding Cars on Run Through Trains) (Hours)",
+         Variable == "System" | Variable == "System (U.S.)") %>% 
+  gather(Date, Hrs, -("Railroad/\nRegion":"Sub-Variable")) %>% 
+  rename("railroad" = "Railroad/\nRegion")
+
+dwell$Date2 <- as.POSIXct(strptime(dwell$Date, "%m/%d/%Y"))
+dwell$Hrs <- as.numeric(as.character(dwell$Hrs))
+
+dwell <- as.tibble(dwell)
+
+ggplot(dwell, aes(x=Date2, y=Hrs, color=railroad)) +
+  geom_line(size=2) +
+  theme_hc()
+```
+
+Again, there does appear do be a decrease in dwell time, but we'll have to do some more work to figure out how significat it is.
+
+What's the average for each line?
+
+```{r}
+dwell %>% 
+  group_by(railroad) %>% 
+  summarise(m = mean(Hrs))
+```
+
+Average Train Speed  (MPH)
+```{r}
+#Now train speed
+
+speed <- rail %>% 
+  filter(Measure == "Average Train Speed  (MPH)",
+         Variable == "System" | Variable == "System (U.S.)") %>% 
+  gather(Date, mph, -("Railroad/\nRegion":"Sub-Variable")) %>% 
+  rename("railroad" = "Railroad/\nRegion")
+
+speed$Date2 <- as.POSIXct(strptime(speed$Date, "%m/%d/%Y"))
+speed$mph <- as.numeric(as.character(speed$mph))
+
+speed <- as.tibble(speed)
+
+ggplot(speed, aes(x=Date2, y=mph, color=railroad)) +
+  geom_line(size=2) +
+  theme_hc()
+```
+
+
+```{r}
+wideloads <- rail2 %>% 
+  spread(railroad, Load) %>% 
+  select(7:13)
+
+wideloads <- wideloads[2:7]/rowSums(wideloads[2:7])
+
+write.csv(wideloads, "/Users/mattl/OneDrive/Desktop/Data/loadarea1.csv")
+```
+
+```{r}
+wideloadfull <- rail2 %>% 
+  spread(railroad, Load)
+```
+
+```{r}
+wideloadsdate <- rail2 %>% 
+  spread(railroad, Load) %>% 
+  select(7:13)
+
+write.csv(wideloadsdate, "/Users/mattl/OneDrive/Desktop/Data/loadarea2.csv")
+```
+
+Here there appears to be little questions that trains speed is getting faster. NS and CSX, specifically, though all the lines appear to improve, expect maybe BNSF. We will have to do more analysis to figure it out.
+
+What's the average for each line?
+```{r}
+speed %>% 
+  group_by(railroad) %>% 
+  summarise(m = mean(mph))
+```
+
+Alright, now that we've done this, we need to compare how the systems changed from 2018 to 2019. We will compare the averages as this is what executives tend to cite on their earnings call. 
+
+Let's do some filtering to get the right numbers. We'll do this for each variable.
+
+```{r}
+dwell18 <- dwell %>% 
+  filter(Date2 <= "2018-12-26 EST" & Date2 >= "2017-12-27 EST")
+
+dwell19 <- dwell %>% 
+  filter(Date2 >= "2018-12-26 EST" & Date2 < "2020-01-01 EST")
+
+speed18 <- speed %>% 
+  filter(Date2 <= "2018-12-26 EST" & Date2 >= "2017-12-27 EST")
+
+speed19 <- speed %>% 
+  filter(Date2 >= "2018-12-26 EST" & Date2 < "2020-01-01 EST")
+
+loads18 <- rail2 %>% 
+  filter(Date2 <= "2018-12-26 EST" & Date2 >= "2017-12-27 EST")
+
+loads19 <- rail2 %>% 
+  filter(Date2 >= "2018-12-26 EST" & Date2 < "2020-01-01 EST")
+```
+
+```{r}
+d <- dwell18 %>% 
+  group_by(railroad) %>% 
+  summarise(Dwell_2018 = mean(Hrs))
+d
+```
+```{r}
+d2 <- dwell19 %>% 
+  group_by(railroad) %>% 
+  summarise(Dwell_2019 = mean(Hrs))
+
+d2
+```
+
+```{r}
+s <- speed18 %>% 
+  group_by(railroad) %>% 
+  summarise(Speed_2018 = mean(mph))
+s
+```
+
+```{r}
+s2 <- speed19 %>% 
+  group_by(railroad) %>% 
+  summarise(Speed_2019 = mean(mph))
+s2
+```
+
+```{r}
+l <- loads18 %>% 
+  group_by(railroad) %>% 
+  summarise(Loads_2018 = mean(Load))
+l
+```
+
+```{r}
+l2 <- loads19 %>% 
+  group_by(railroad) %>% 
+  summarise(Loads_2019 = mean(Load))
+l2
+```
+
+```{r}
+colSums(loads18[8])
+```
+
+```{r}
+colSums(loads19[8])
+```
+
+Alright, so it looks like some things changed. Now lets figure out how to chart these puppies.First, we need to combine some of our objects and get a percent change column.
+
+```{r}
+dwellcomp <- d %>% 
+  left_join(d2) %>% 
+  mutate(change = ((Dwell_2019 - Dwell_2018)/Dwell_2018))
+dwellcomp
+```
+
+```{r}
+speedcomp <- s %>% 
+  left_join(s2) %>% 
+  mutate(change = ((Speed_2019 - Speed_2018)/Speed_2018))
+speedcomp
+```
+
+```{r}
+loadcomp <- l %>% 
+  left_join(l2) %>% 
+  mutate(change = ((Loads_2019 - Loads_2018)/Loads_2018))
+loadcomp
+```
+COOL, I think we're ready to make some plots.
+
+```{r}
+library(extrafont)
+loadcomp$color <- ifelse(loadcomp$change < 0, "negative","positive")
+
+loadcomp %>%
+ggplot(aes(x = reorder(railroad,change, sum), y = change))+
+  geom_bar(stat = "identity", aes(fill = color),show.legend=(color=FALSE))+
+  scale_fill_manual(values=c(positive="#414192",negative="#76797C"))+
+  geom_text(aes(label=scales::percent(round(change, digits = 3))),
+            position=position_dodge(width=0.9), vjust=-0.25)+
+  ggplot2::labs(title = "In 2019, 5 railroads saw a drop in carloads",
+    subtitle = "Year-over-year percent change carloads",
+    x = "",
+    y = "")+
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))+
+  theme_classic()+
+  theme(panel.background = element_rect(fill = "#F5F6F7", colour = "#F5F6F7"))+
+  theme(plot.background = element_rect(fill = "#F5F6F7", colour = "#F5F6F7"))+
+  coord_flip()
+```
+
+```{r}
+speedcomp$color <- ifelse(speedcomp$change < 0, "negative","positive")
+
+speedcomp %>%
+ggplot(aes(x = reorder(railroad,change, sum), y = change))+
+  geom_bar(stat = "identity",aes(fill = color),show.legend=(color=FALSE))+
+  scale_fill_manual(values=c(positive="#121242",negative="#A3A3DE"))+
+  geom_text(aes(label=scales::percent(round(change, digits = 3))),
+            position=position_dodge(width=0.9), vjust=-0.25)+
+  ggplot2::labs(title = "In 2019, 3 railroads became faster",
+    subtitle = "Year-over-year percent change system-wide speed time from 2018 from 2019",
+    x = "",
+    y = "")+
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))+
+  theme_hc() +
+  theme(panel.background = element_rect(fill = "#F5F6F7", colour = "#F5F6F7"))+
+  theme(plot.background = element_rect(fill = "#F5F6F7", colour = "#F5F6F7"))+
+  coord_flip()
+```
+
+```{r}
+dwellcomp$color <- ifelse(dwellcomp$change < 0, "negative","positive")
+
+dwellcomp %>%
+ggplot(aes(x = reorder(railroad,change, sum), y = change))+
+  geom_bar(stat = "identity", aes(fill = color),show.legend=(color=FALSE))+
+  scale_fill_manual(values=c(positive="#121242",negative="#A3A3DE"))+
+  geom_text(aes(label=scales::percent(round(change, digits = 3))),
+            position=position_dodge(width=0.9), vjust=-0.25)+
+  ggplot2::labs(title = "In 2019, 5 of the 6 Class I railroads see drop in dwell time",
+    subtitle = "Year-over-year percent change system-wide dwell time",
+    x = "",
+    y = "Percent change from 2018 to 2019")+
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))+
+  theme_hc()+
+  theme(panel.background = element_rect(fill = "#F5F6F7", colour = "#F5F6F7"))+
+  theme(plot.background = element_rect(fill = "#F5F6F7", colour = "#F5F6F7"))
+```
+
+```{r}
+write.csv(speedcomp, "/Users/mattl/OneDrive/Desktop/Data/speedcomp.csv")
+write.csv(dwellcomp, "/Users/mattl/OneDrive/Desktop/Data/dwellcomp.csv")
+write.csv(loadcomp, "/Users/mattl/OneDrive/Desktop/Data/loadcomp.csv")
+```
+
+```{r}
+cn <- rail %>% 
+   rename("railroad" = "Railroad/\nRegion")
+
+cn <- cn %>% 
+  filter(railroad == "CN")
+```
+
