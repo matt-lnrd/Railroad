@@ -36,3 +36,19 @@ ikeacsv %>%
   theme_classic()
 ```
 
+
+```{r}
+ikeacsv %>% 
+  count(category, sort = TRUE)
+```
+
+```{r}
+ikeacsv %>% 
+  count(sellable_online, category, sort = TRUE)
+
+```
+
+```{r}
+
+```
+
