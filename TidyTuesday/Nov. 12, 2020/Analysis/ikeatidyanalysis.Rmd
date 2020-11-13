@@ -1,0 +1,38 @@
+---
+title: "Tidy Tuesday Nov. 12"
+author: "Matt Leonard"
+date: "11/12/2020"
+output: html_document
+---
+
+```{r}
+library(tidytuesdayR)
+library(tidyverse)
+library(scales)
+library(lubridate)
+library(zoo)
+```
+
+```{r}
+tuesdata <- tidytuesdayR::tt_load(2020, week = 45)
+```
+
+```{r}
+ikeacsv <- tuesdata$ikea
+ikeacsv
+```
+
+```{r}
+ikeacsv %>% 
+  count(designer, sort = TRUE) %>% 
+  filter(n > 100) %>% 
+  ggplot(aes(reorder(designer, n), n)) +
+  geom_bar(stat = "identity", fill = "turquoise4") +
+  coord_flip()+
+  labs(y = "",
+       x = "",
+       title = "IKEA had done more designs for its stores than any other designer",
+       subtitle = "Count of designs sold in IKEA by designer") +
+  theme_classic()
+```
+
